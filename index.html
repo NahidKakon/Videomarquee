@@ -122,7 +122,9 @@
       }
       main { padding: 32px 0; }
     }
-
+    .marquee-container.has-selection .marquee-track {
+     animation-play-state: paused;
+    }
     @media (prefers-reduced-motion: reduce) {
       .marquee-track {
         animation: none;
@@ -154,59 +156,84 @@
     </p>
   </main>
 
-  <script>
-    /*
-      Keep these video files beside this HTML file, or update the paths below
-      to match the folder where you upload them.
+  
+<script>
+const videos = [
+  {
+    title: "Dignity, choice & person-centred care",
+    src: "./Dignity%2C%20choice%20%26%20person-centred%20care.mp4"
+  },
+  {
+    title: "Dignity, choice and person-centred care",
+    src: "./Dignity%2C%20choice%20and%20person-centred%20care%20.mp4"
+  }
+];
 
-      Filenames with spaces and punctuation are URL-encoded automatically.
-    */
-    const videos = [
-      {
-        title: "Dignity, choice & person-centred care",
-        src: "./Dignity%2C%20choice%20%26%20person-centred%20care.mp4"
-      },
-      {
-        title: "Dignity, choice and person-centred care",
-        src: "./Dignity%2C%20choice%20and%20person-centred%20care%20.mp4"
-      }
-    ];
+const track = document.getElementById("marqueeTrack");
+const container = document.querySelector(".marquee-container");
 
-    const track = document.getElementById("marqueeTrack");
-    const container = document.querySelector(".marquee-container");
+let activeVideo = null;
 
-    // Duplicate the sequence so the marquee can loop continuously.
-    [...videos, ...videos].forEach((item, index) => {
-      const wrapper = document.createElement("div");
-      wrapper.className = "video-wrapper";
+// Duplicate videos for the continuous marquee.
+[...videos, ...videos].forEach((item) => {
+  const wrapper = document.createElement("div");
+  wrapper.className = "video-wrapper";
 
-      const video = document.createElement("video");
-      video.src = item.src;
-      video.autoplay = true;
+  const video = document.createElement("video");
+  video.src = item.src;
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.controls = true;
+  video.title = item.title;
+
+  wrapper.appendChild(video);
+  track.appendChild(wrapper);
+
+  // Muted autoplay for the scrolling preview.
+  video.play().catch(() => {});
+
+  // Click to play with sound.
+  video.addEventListener("click", async () => {
+    // Clicking the active video pauses it.
+    if (activeVideo === video) {
+      video.pause();
       video.muted = true;
-      video.loop = true;
-      video.playsInline = true;
-      video.preload = "metadata";
-      video.setAttribute("aria-label", item.title);
-      video.setAttribute("title", item.title);
+      activeVideo = null;
+      container.classList.remove("has-selection");
+      return;
+    }
 
-      // Attempt playback; browsers may block autoplay, but muted playback is usually allowed.
-      video.play().catch(() => {});
+    // Stop and mute the previously selected video.
+    if (activeVideo) {
+      activeVideo.pause();
+      activeVideo.muted = true;
+      activeVideo.currentTime = 0;
+    }
 
-      wrapper.appendChild(video);
-      track.appendChild(wrapper);
+    // Pause and mute all other copies.
+    track.querySelectorAll("video").forEach((other) => {
+      if (other !== video) {
+        other.pause();
+        other.muted = true;
+      }
     });
 
-    // Highlight cards that are substantially visible in the viewport.
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          entry.target.classList.toggle("active-video", entry.isIntersecting);
-        });
-      }, { root: container, threshold: 0.5 });
+    activeVideo = video;
+    container.classList.add("has-selection");
 
-      track.querySelectorAll(".video-wrapper").forEach((element) => observer.observe(element));
+    video.muted = false;
+    video.volume = 1;
+
+    try {
+      await video.play();
+    } catch (error) {
+      console.error("Could not play video with sound:", error);
     }
-  </script>
+  });
+});
+</script>
 </body>
 </html>
